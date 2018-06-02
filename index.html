@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" ng-app="tuskApp">
+  <head>
+    <title>Search</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bower_components/fontawesome/web-fonts-with-css/css/fontawesome-all.min.css">
+
+    <style>
+        .document {
+            margin-bottom: 1.0rem;
+        }
+        .document-title {
+            margin-bottom: .25rem;
+            font-size: 1.5rem;
+        }
+        .document-metadata {
+            margin-bottom: 1.0rem;
+            color: #999;
+        }
+        .navbar {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+
+    <script src="bower_components/angular/angular.min.js"></script>
+
+  </head>
+  <body ng-controller="TuskCtrl" viewport="window">
+        <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
+        <a class="navbar-brand" href="#"><i class="fa fa-bullhorn"></i></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <form class="navbar-form my-2 my-lg-0 my-md-0 mr-2" ng-submit="submitQuery()">
+                    <div class="input-group">
+                        <input class="form-control" type="text" placeholder="Search" ng-model="q">
+                        <div class="input-group-btn">
+                            <button class="btn btn-primary" type="submit"><i class="fa fa-search fa-fw"></i></button>
+                        </div>
+                    </div>
+                </form>
+
+                <a class="btn btn-success" ng-click="getNext()" style="color: white;">Next <i class="fa fa-arrow-right fa-lg fa-inverse"></i></a>
+            </div>
+        </nav>
+
+        <div class="container">
+        <div class="document" ng-repeat="document in documents">
+            <button type="button" class="btn btn-lg btn-{{ document.flagged ? 'primary' : 'secondary' }} float-right" ng-click="toggleFlagged(document)">
+                <i class="fa fa-flag"></i>
+            </button>
+
+            <p>
+                <a class="h4" href="{{ document.url }}">{{ document.title }}</a>
+                <span class="badge badge-success">{{ document.query }}</span>
+            </p>
+
+            <ul class="list-inline">
+                <li class="list-inline-item"><strong><i class="fa fa-user fa-fw"></i> </strong><span class="document-metadata">{{ document.author }}</span></li>
+                <li class="list-inline-item"><strong><i class="fa fa-book fa-fw"></i> </strong><span class="document-metadata">{{ document.venue }}</span></li>
+                <li class="list-inline-item"><strong><i class="fa fa-calendar fa-fw"></i> </strong><span class="document-metadata">{{ document.date }}</span></li>
+            </ul>
+
+            <p>{{ document.abstract }}</p>
+            <hr>
+        </div>
+        </div>
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="bower_components/jquery/dist/jquery.slim.min.js"></script>
+    <script src="bower_components/popper.js/dist/popper.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    
+    <script>
+        var tuskApp = angular.module('tuskApp', []);
+        tuskApp.controller('TuskCtrl', function TuskCtrl($scope, $http) {
+            $scope.query = "";
+            $scope.count = 10;
+            $scope.offset = 0;
+            $scope.documents = [];
+            $scope.loading = false;
+
+            $scope.submitQuery = function() {
+                $scope.query = $scope.q;
+                $scope.offset = 0;
+                $scope.loading = true;
+                $http.post("http://localhost:5000/search", { 'q'     : $scope.query, 
+                                                             'start' : $scope.offset, 
+                                                             'count' : $scope.count })
+                .then(function(response) {
+                    $scope.documents = response.data;
+                    $scope.offset += $scope.count;
+
+                    for(var i = 0; i < $scope.documents.length; i++) {
+                        $scope.documents[i].flagged = false;
+                    }
+                },
+                function(response) {
+                    $scope.documents = [];
+                })
+                .finally(function() {
+                    $scope.loading = false;
+                })
+            };
+
+            $scope.getNext = function() {
+                var data = {'q' : $scope.query, 'start' : $scope.offset, 'count' : $scope.count };
+
+                for(var i = 0; i < $scope.documents.length; i++) {
+                    data[$scope.documents[i].id] = $scope.documents[i].flagged;
+                }
+                
+                $scope.loading = true;
+
+                $http.post("http://localhost:5000/next", data)
+                .then(function(response) {
+                    $scope.documents = response.data;
+                    $scope.offset += $scope.count;
+   
+                    for(var i = 0; i < $scope.documents.length; i++) {
+                        $scope.documents[i].flagged = false;
+                    }
+                },
+                function(response) {
+                    $scope.documents = [];
+                })
+                .finally(function() {
+                    $scope.loading = false;
+                })
+            };
+
+            $scope.toggleFlagged = function(doc) {
+                doc.flagged = !doc.flagged;
+            };
+        });
+    </script>
+
+  </body>
+</html>
+

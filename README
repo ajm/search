@@ -1,0 +1,25 @@
+
+# 1. install python dependencies
+#    assumes Python 2.7.X
+virtualenv env
+source env/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 2. install javascript dependencies
+#    (npm install -g bower)
+bower install
+
+# 3. download CS data from arXiv
+python get_arxiv.py > CS.xml
+
+# 4. build database
+tar xf dictionaries.tar.bz2
+python create_db.py CS.xml
+
+# 5. start server
+python server.py
+
+# 6. open in browser
+./search/index.html
+
