@@ -2,8 +2,9 @@ import os
 import time
 from sys import stderr
 from datetime import datetime
+import sqlite3
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session, escape
 from flask_sqlalchemy import SQLAlchemy
 
 from utils import load_sparse_linrel, load_sparse_bm25, load_features_bm25
@@ -12,7 +13,7 @@ from informationretrieval import okapi_bm25
 
 if __name__ == '__main__' :
     print "pre-loading matrices..."
-    linrel_data = load_sparse_linrel()
+    linrel_data = None #load_sparse_linrel()
     bm25_data = load_sparse_bm25()
     bm25_features = load_features_bm25()
     print "pre-loading done!"
@@ -31,6 +32,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 class Article(db.Model) :
+    __tablename__ = 'article'
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(200), nullable=False)
     author      = db.Column(db.String(200), nullable=False)
@@ -40,8 +42,7 @@ class Article(db.Model) :
     date        = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     arxivid     = db.Column(db.String(9), nullable=False, unique=True)
 
-    def __repr__(self) :
-        return '<Article %r>' % self.idx
+    def __repr__(self) : return '<Article %r>' % self.id
 
     def json(self) :
         return {
@@ -54,6 +55,55 @@ class Article(db.Model) :
             'date'      : self.date.strftime("%d/%m/%Y"),
             'arxivid'   : self.arxivid
         }
+
+class User(db.Model) :
+    __tablename__ = 'user'
+    id          = db.Column(db.Integer, nullable=False, primary_key=True)
+    name        = db.Column(db.String(200), nullable=False, unique=True)
+    email       = db.Column(db.String(200), nullable=False)
+    gender      = db.Column(db.String(6), nullable=False)
+    relevance   = db.Column(db.String(20)) # 'not relevant'
+    q1          = db.Column(db.String(20)) # 'Strongly disagree'
+    q2          = db.Column(db.String(20))
+    q3          = db.Column(db.String(20))
+    q4          = db.Column(db.String(20))
+    q5          = db.Column(db.String(20))
+
+    def __repr__(self) : return '<User %r>' % self.id
+
+    def json(self) :
+        return {
+            'name'      : self.name,
+            'email'     : self.email,
+            'gender'    : self.gender
+        }
+
+class Experiment(db.Model) :
+    __tablename__ = 'experiment'
+    id          = db.Column(db.Integer, nullable=False, primary_key=True)
+    search_term = db.Column(db.String(200), nullable=False)
+    positive    = db.Column(db.Boolean, nullable=False)
+
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user        = db.relationship('User', backref='experiments')
+
+    def __repr__(self) : 
+        return '<Feedback %r>' % self.id
+
+class Feedback(db.Model) :
+    __tablename__ = 'feedback'
+    id          = db.Column(db.Integer, nullable=False, primary_key=True)
+    feedback    = db.Column(db.Boolean, nullable=False)
+
+    article_id  = db.Column(db.Integer, db.ForeignKey('article.id'), nullable=False)
+    article     = db.relationship('Article', backref='feedbacks')
+
+    experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'), nullable=False)
+    experiment  = db.relationship('Experiment', backref='feedbacks')
+
+    def __repr__(self) : 
+        return '<Feedback %r>' % self.id
+
 
 def get_documents(articles_npid) :
     articles_dbid = [ i + 1 for i in articles_npid ] # database is 1-indexed, numpy is 0-indexed
@@ -86,6 +136,98 @@ def feedback_query() :
             print >> stderr, "  [%s] %s" % (k,v)
 
     return jsonify([ i.json() for i in get_top_articles_okapibm25(post.get('q'), post.get('start'), post.get('count')) ])
+
+@app.route('/feedback', methods=['POST'])
+def store_feedback() :
+    post = request.get_json()
+    print >> stderr, post
+
+    if not post or [ k for k in ('q', 'name', 'type') if k not in post ] :
+        return jsonify({ 'error' : 'feedback object incomplete' }), 500
+
+    experiment = Experiment()
+    experiment.search_term = post.get('q')
+    experiment.user = User.query.filter_by(name=post.get('name')).first()
+    experiment.positive = post.get('type') == "relevant"
+
+    db.session.add(experiment)
+
+    for k in post :
+        if k in ('q', 'name', 'type') :
+            continue
+
+        print >> stderr, "  %s = %s" % (k, post.get(k))
+        fb = Feedback()
+        fb.article = Article.query.filter_by(arxivid=k).first()
+        fb.experiment = experiment
+        fb.feedback = post.get(k)
+
+        db.session.add(fb)
+
+
+    db.session.commit()
+
+    print >> stderr, "feedback stored"
+    return jsonify({}), 200
+
+@app.route('/register', methods=['POST'])
+def register_experiment() :
+    post = request.get_json()
+    print >> stderr, post
+
+    if not post or [ k for k in ('name','email','gender') if k not in post ] :
+        return jsonify({ 'error' : 'form incomplete' }), 500
+
+    user = User.query.filter_by(name=post['name']).first()
+    if user :
+        return jsonify({ 'error' : 'user already in database (use a different username)' }), 500
+
+    user = User()
+    user.name = post.get('name')
+    user.email = post.get('email') 
+    user.gender = post.get('gender')
+
+    try :
+        db.session.add(user)
+        db.session.commit()
+
+    except sqlite3.Error, e :
+        print >> stderr, str(e)
+        return jsonify({ 'error' : 'database commit failed' }), 500
+
+    return jsonify({}), 200
+
+@app.route('/questionnaire', methods=['POST'])
+def finish_experiment() :
+    post = request.get_json()
+    print >> stderr, post
+
+    if not post or [ k for k in post if not post[k] ] :
+        return jsonify({ 'error' : 'form incomplete' }), 500
+
+    if 'name' not in post :
+        return jsonify({ 'error' : 'no specified user' }), 500
+
+    user = User.query.filter_by(name=post['name']).first()
+    if not user :
+        return jsonify({ 'error' : 'user not found (searched for "%s")' % post['name'] }), 500
+
+    user.relevance = post.get('relevance_preference')
+
+    user.q1 = post.get('q1')
+    user.q2 = post.get('q2')
+    user.q3 = post.get('q3')
+    user.q4 = post.get('q4')
+    user.q5 = post.get('q5')
+
+    try :
+        db.session.commit()
+
+    except sqlite3.Error, e :
+        print >> stderr, str(e)
+        return jsonify({ 'error' : 'database commit failed' }), 500
+
+    return jsonify({}), 200
 
 @app.after_request
 def after_request(response) :

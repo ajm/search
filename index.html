@@ -23,36 +23,122 @@
             color: #999;
         }
         .navbar {
+            margin-bottom: 1.0rem;
+        }
+        .jumbotron {
+            margin-top: 1.5rem;
             margin-bottom: 1.5rem;
         }
+        .form-group {
+            display: block;
+            margin-bottom: 1.0rem;
+        }
+        .form-control {
+            margin-bottom: 0.5rem;
+        }
+        .form-spacer {
+            padding-top: 1rem;
+        }
+
     </style>
 
     <script src="bower_components/angular/angular.min.js"></script>
-
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    <script type="text/javascript" src="bower_components/MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML,local/local"></script>
+    
   </head>
   <body ng-controller="TuskCtrl" viewport="window">
-        <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
+        <!--
+            NAVBAR
+        -->
+        <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark" ng-if="resultsPage()">
         <a class="navbar-brand" href="#"><i class="fa fa-bullhorn"></i></a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <form class="navbar-form my-2 my-lg-0 my-md-0 mr-2" ng-submit="submitQuery()">
+                <form class="navbar-form my-2 my-lg-0 my-md-0 mr-2" ng-submit="submitQuery()" ng-show="test_mode">
                     <div class="input-group">
-                        <input class="form-control" type="text" placeholder="Search" ng-model="q">
+                        <input class="form-control" type="text" placeholder="Enter query" ng-model="navbar.q" ng-readonly="!test_mode" ng-if="test_mode">
                         <div class="input-group-btn">
                             <button class="btn btn-primary" type="submit"><i class="fa fa-search fa-fw"></i></button>
                         </div>
                     </div>
                 </form>
 
-                <a class="btn btn-success" ng-click="getNext()" style="color: white;">Next <i class="fa fa-arrow-right fa-lg fa-inverse"></i></a>
+                <button class="btn btn-danger mr-1" ng-click="endExperiment()" ng-disabled="!resultsPage()" style="color: white;">Exit <i class="fa fa-times fa-lg fa-inverse"></i></button>
+                <button class="btn btn-info mr-1" ng-click="toggleFeedback()" ng-disabled="!resultsPage() || !test_mode" style="color: white;">Feedback <i class="fa fa-{{ positive_feedback ? 'plus' : 'minus' }}-circle fa-lg fa-inverse"></i></button>
+                <button class="btn btn-success mr-1" ng-click="nextExperiment()" ng-disabled="loading || !resultsPage() || navbar.q === ''" style="color: white;">Next <i class="fa fa-arrow-right fa-lg fa-inverse"></i></button>
             </div>
         </nav>
 
+        <!--
+            INSTRUCTIONS
+        -->
+        <div class="container" ng-if="!test_mode">
+            <div class="jumbotron">
+                <div ng-if="beforeExperiment()">
+                    <b>Welcome to experiment.</b> Please fill in your details below:
+                </div>
+                <div ng-if="duringExperiment()">
+                <b>Question {{ experiments[experiment_counter].num }}/{{ experiments.length }}:</b> Please indicate which of the following documents are <b>{{ experiments[experiment_counter].type }}</b> to <b>{{ experiments[experiment_counter].topic }}</b>. You may select as many or as few documents as necessary. When you are finished, please click <b>Next</b>.
+                </div>
+                <div ng-if="afterExperiment()">
+                    <b>Thank you for participanting.</b>
+                </div>
+            </div>
+        </div>
+
+        <!--
+            START FORM
+        -->
         <div class="container">
-        <div class="document" ng-repeat="document in documents">
+        <div class="alert alert-danger" ng-if="registry_error">
+            <strong>ERROR:</strong> {{ registry_error_message }}.
+        </div>
+        </div>
+
+        <form class="container" ng-if="!test_mode && beforeExperiment()">
+            
+            <div class="form-group">
+                <label>Name: </label>
+                <input type="text" class="form-control col-lg-4 col-md-6" ng-model="registration_form.name" placeholder="Enter name" required>
+            </div>
+            <div class="form-group">
+                <label>Email address: </label>
+                <input type="email" class="form-control col-lg-4 col-md-6" ng-model="registration_form.email" placeholder="Enter email" required>
+                <small id="emailHelp" class="form-text text-muted">We will not share your email with anyone else.</small>
+            </div>
+            <div class="form-group">
+                <label>Gender: </label>
+                <select ng-model="registration_form.gender" required>
+                    <option disabled selected value> -- select an option -- </option>
+                    <option ng-repeat="g in ['Female','Male','Other']">{{ g }}</option>
+                </select>
+            </div>
+            
+            <div class="form-spacer"></div>
+            
+            <button type="submit" class="btn btn-primary" ng-click="startExperiment()">Submit</button>
+            <button type="submit" class="btn btn-warning" ng-click="setTestMode()">Test system</button>
+        </form>
+
+        <!--
+            LOADING MESSAGE
+        -->
+        <div class="container" ng-show="loading && resultsPage()" style="display:block; text-align:center; margin-bottom: 1cm;">
+            <h4>Loading</h4><i class="fa fa-sync fa-spin fa-3x" style=" vertical-align: middle;"></i>
+        </div>
+
+        <!--
+            SEARCH RESULTS
+        -->
+        <div class="container" ng-show="!loading && resultsPage()">
+          <div class="document" ng-repeat="document in documents">
             <button type="button" class="btn btn-lg btn-{{ document.flagged ? 'primary' : 'secondary' }} float-right" ng-click="toggleFlagged(document)">
                 <i class="fa fa-flag"></i>
             </button>
@@ -68,66 +154,237 @@
                 <li class="list-inline-item"><strong><i class="fa fa-calendar fa-fw"></i> </strong><span class="document-metadata">{{ document.date }}</span></li>
             </ul>
 
-            <p>{{ document.abstract }}</p>
-            <hr>
+            <p>{{ document.abstract }} </p>
+            <hr ng-if="!$last" >
+          </div>
         </div>
-        </div>
+
+        <!--
+            END FORM
+        -->
+        <form class="container" ng-if="!test_mode && afterExperiment()">
+            <div class="form-group col-lg-8 col-md-12" style="padding:0;">
+                <label>What type of relevance feedback did you prefer? </label>
+                <select class="float-right" ng-model="registration_form.relevance_preference" required>
+                    <option disabled selected value> -- select an option -- </option>
+                    <option ng-repeat="g in ['relevant','not relevant']">{{ g }}</option>
+                </select>
+            </div>
+            <hr/>
+            <div class="form-group col-lg-8 col-md-12" style="padding:0;" ng-repeat="question in resque_questions">
+                <label>{{ question.text }}</label>
+                <select class="float-right" ng-model="question.response" required>
+                    <option disabled selected value> -- select an option -- </option>
+                    <option ng-repeat="g in ['Strongly agree','Agree','Neutral','Disagree','Strongly disagree']">{{ g }}</option>
+                </select>
+            </div>
+            <div class="form-spacer"></div>
+            <button type="submit" class="btn btn-primary" ng-click="endExperiment()">Finish</button>
+        </form>
 
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="bower_components/jquery/dist/jquery.slim.min.js"></script>
-    <script src="bower_components/popper.js/dist/popper.min.js"></script>
+    <!--<script src="bower_components/popper.js/dist/popper.min.js"></script>-->
     <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
-    
+
     <script>
         var tuskApp = angular.module('tuskApp', []);
         tuskApp.controller('TuskCtrl', function TuskCtrl($scope, $http) {
+            $scope.test_mode = false;
+            $scope.registry_error = false;
+            $scope.registry_error_message = null;
             $scope.query = "";
             $scope.count = 10;
             $scope.offset = 0;
             $scope.documents = [];
             $scope.loading = false;
+            $scope.navbar = { q : "" };
+            $scope.positive_feedback = true;
+
+            $scope.registration_form = {};
+            $scope.experiment_counter = -1;
+            $scope.experiments = [
+                { 'topic' : 'artificial neural networks' },
+                { 'topic' : 'convolutional neural networks' },
+                { 'topic' : 'delusional neural networks' }
+            ];
+
+            $scope.resque_questions = [
+                { 'id' : 'q1', 'text' : "A ResQue-style question: " },
+                { 'id' : 'q2', 'text' : "Another ResQue-style question: " },
+                { 'id' : 'q3', 'text' : "Yet another ResQue-style question: " },
+                { 'id' : 'q4', 'text' : "And another ResQue-style question: " },
+                { 'id' : 'q5', 'text' : "A final ResQue-style question: " }
+            ];
+
+            
+            $scope.$watch(function(){
+                MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+                return true;
+            });
+
+            $scope.setTestMode = function() {
+                $scope.test_mode = true;
+            };
+
+            $scope.toggleFeedback = function() {
+                $scope.positive_feedback = !$scope.positive_feedback;
+            };
+
+            $scope.beforeExperiment = function() {
+                return $scope.experiment_counter == -1;
+            };
+
+            $scope.afterExperiment = function() {
+                return $scope.experiment_counter == $scope.experiments.length;
+            };
+
+            $scope.duringExperiment = function() {
+                return (! $scope.beforeExperiment()) && (! $scope.afterExperiment());
+            };
+
+            $scope.resultsPage = function() {
+                return $scope.test_mode || $scope.duringExperiment();
+            };
+
+            $scope.initialiseExperiments = function() {
+                var i = 0, j = 0, temp = null;
+
+                // shuffle
+                for (i = $scope.experiments.length - 1; i > 0; i--) {
+                    j = Math.floor(Math.random() * (i + 1));
+                    temp = $scope.experiments[i];
+                    $scope.experiments[i] = $scope.experiments[j];
+                    $scope.experiments[j] = temp;
+                }
+
+                // re-number + set relevant/non-relevant
+                j = Math.random() < 0.5;
+
+                for(i = 0; i < $scope.experiments.length; i++) {
+                    $scope.experiments[i].num = i + 1;
+                    $scope.experiments[i].type = 'relevant';
+                    if(((i % 2) == 0) ^ j)
+                        $scope.experiments[i].type = 'not relevant';
+                }
+
+                // make sure questionnaire answers are null
+                $scope.registration_form.relevance_preference = null;
+                for(i = 0; i < $scope.resque_questions.length; i++) {
+                    $scope.resque_questions[i].response = null;
+                }
+            };
+
+            $scope.startExperiment = function() {
+                $http.post("http://localhost:5000/register", $scope.registration_form)
+                    .then(function(response) {
+                        $scope.registry_error = false;
+                        $scope.initialiseExperiments();
+                        $scope.nextExperiment();
+                    },
+                    function(response) {
+                        $scope.registry_error = true;
+                        $scope.registry_error_message = response.data.error;
+                    })
+            };
+
+            $scope.reset = function() {
+                $scope.loading = false;
+                $scope.test_mode = false;
+                $scope.registry_error = false;
+                $scope.positive_feedback = true;
+                $scope.experiment_counter = -1;
+                $scope.documents = [];
+                $scope.navbar.q = "";
+                $scope.offset = 0;
+                $scope.registration_form = {};
+                
+                for(q in $scope.resque_questions) {
+                    q.response = null;
+                }
+            };
+
+            $scope.endExperiment = function() {
+                if($scope.resultsPage()) {
+                    $scope.reset();
+                    return;
+                }
+
+                for(var i = 0; i < $scope.resque_questions.length; ++i) {
+                    $scope.registration_form[$scope.resque_questions[i].id] = $scope.resque_questions[i].response;
+                }
+
+                $http.post("http://localhost:5000/questionnaire", $scope.registration_form)
+                    .then(function(response) {
+                        $scope.reset();
+                    },
+                    function(response) {
+                        $scope.registry_error = true;
+                        $scope.registry_error_message = response.data.error;
+                    })
+            };
+
+            $scope.nextExperiment = function() {
+                if($scope.test_mode) {
+                    $scope.submitQuery();
+                    return;
+                }
+
+                if($scope.beforeExperiment()) {
+                    $scope.experiment_counter++;
+                    $scope.navbar.q = $scope.experiments[$scope.experiment_counter].topic;
+                    $scope.positive_feedback = $scope.experiments[$scope.experiment_counter].type === 'relevant'
+                    $scope.submitQuery();
+                    return;
+                }
+
+                payload = { 'q'     : $scope.query,
+                            'name'  : $scope.registration_form.name,
+                            'type'  : $scope.experiments[$scope.experiment_counter].type };
+
+                for(var i = 0; i < $scope.documents.length; ++i) {
+                    payload[$scope.documents[i].id] = $scope.documents[i].flagged;
+                }
+
+                $http.post("http://localhost:5000/feedback", payload)
+                    .then(function(response) {
+                        
+                        $scope.experiment_counter++;
+
+                        if($scope.duringExperiment()) {
+                            $scope.navbar.q = $scope.experiments[$scope.experiment_counter].topic;
+                            $scope.positive_feedback = $scope.experiments[$scope.experiment_counter].type === 'relevant'
+                            $scope.submitQuery();
+                        }
+                        else { 
+                            $scope.documents = []; 
+                        }
+                    }, 
+                    function(response) {
+                        $scope.registry_error = true;
+                        $scope.registry_error_message = response.data.error;
+                    })
+            };
 
             $scope.submitQuery = function() {
-                $scope.query = $scope.q;
-                $scope.offset = 0;
+                $scope.query = $scope.navbar.q;
                 $scope.loading = true;
                 $http.post("http://localhost:5000/search", { 'q'     : $scope.query, 
                                                              'start' : $scope.offset, 
                                                              'count' : $scope.count })
                 .then(function(response) {
-                    $scope.documents = response.data;
-                    $scope.offset += $scope.count;
+                    if($scope.loading) {
+                        $scope.documents = response.data;
 
-                    for(var i = 0; i < $scope.documents.length; i++) {
-                        $scope.documents[i].flagged = false;
-                    }
-                },
-                function(response) {
-                    $scope.documents = [];
-                })
-                .finally(function() {
-                    $scope.loading = false;
-                })
-            };
+                        for(var i = 0; i < $scope.documents.length; ++i) {
+                            $scope.documents[i].flagged = false;
+                        }
 
-            $scope.getNext = function() {
-                var data = {'q' : $scope.query, 'start' : $scope.offset, 'count' : $scope.count };
-
-                for(var i = 0; i < $scope.documents.length; i++) {
-                    data[$scope.documents[i].id] = $scope.documents[i].flagged;
-                }
-                
-                $scope.loading = true;
-
-                $http.post("http://localhost:5000/next", data)
-                .then(function(response) {
-                    $scope.documents = response.data;
-                    $scope.offset += $scope.count;
-   
-                    for(var i = 0; i < $scope.documents.length; i++) {
-                        $scope.documents[i].flagged = false;
+                        if($scope.test_mode) {
+                            $scope.offset += $scope.count;
+                        }
                     }
                 },
                 function(response) {
@@ -143,7 +400,6 @@
             };
         });
     </script>
-
   </body>
 </html>
 

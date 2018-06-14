@@ -139,7 +139,7 @@ def main() :
     n = len(articles)
 
     create_bm25_matrix(articles, n)
-    create_linrel_matrix(articles, n)
+    #create_linrel_matrix(articles, n)
 
     print >> stderr, "done!"
     return 0
