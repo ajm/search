@@ -62,12 +62,29 @@ class User(db.Model) :
     name        = db.Column(db.String(200), nullable=False, unique=True)
     email       = db.Column(db.String(200), nullable=False)
     gender      = db.Column(db.String(6), nullable=False)
-    relevance   = db.Column(db.String(20)) # 'not relevant'
-    q1          = db.Column(db.String(20)) # 'Strongly disagree'
-    q2          = db.Column(db.String(20))
-    q3          = db.Column(db.String(20))
-    q4          = db.Column(db.String(20))
-    q5          = db.Column(db.String(20))
+    age         = db.Column(db.Integer, nullable=False)
+    pg_degree   = db.Column(db.String(100), nullable=False)
+    ug_degree   = db.Column(db.String(100), nullable=False)
+    edu_years   = db.Column(db.Integer, nullable=False)
+    language    = db.Column(db.String(100), nullable=False)
+    lang_years  = db.Column(db.Integer, nullable=False)
+    
+    sls_google  = db.Column(db.Boolean, nullable=False)
+    sls_arxiv   = db.Column(db.Boolean, nullable=False)
+    sls_rg      = db.Column(db.Boolean, nullable=False)
+    sls_acm     = db.Column(db.Boolean, nullable=False)
+    sls_other   = db.Column(db.Boolean, nullable=False)
+
+    q1          = db.Column(db.String(30))
+    q2          = db.Column(db.String(30))
+    q3          = db.Column(db.String(30))
+    q4          = db.Column(db.String(30))
+    q5          = db.Column(db.String(30))
+    q6          = db.Column(db.String(30)) 
+    q7          = db.Column(db.String(30))
+    q8          = db.Column(db.String(30))
+    q9          = db.Column(db.String(30))
+    q10         = db.Column(db.String(30))
 
     def __repr__(self) : return '<User %r>' % self.id
 
@@ -86,6 +103,10 @@ class Experiment(db.Model) :
 
     user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user        = db.relationship('User', backref='experiments')
+
+    q1          = db.Column(db.String(30))
+    q2          = db.Column(db.String(30))
+    q3          = db.Column(db.String(30))
 
     def __repr__(self) : 
         return '<Feedback %r>' % self.id
@@ -143,7 +164,10 @@ def store_feedback() :
     print >> stderr, post
 
     if not post or [ k for k in ('q', 'name', 'type') if k not in post ] :
-        return jsonify({ 'error' : 'feedback object incomplete' }), 500
+        return jsonify({ 'error' : 'feedback object incomplete (no query, username, search type)' }), 500
+
+    if not post or [ k for k in ('q1', 'q2', 'q3') if k not in post ] :
+        return jsonify({ 'error' : 'feedback object incomplete (mini-questionnaire incomplete)' }), 500
 
     experiment = Experiment()
     experiment.search_term = post.get('q')
@@ -153,7 +177,7 @@ def store_feedback() :
     db.session.add(experiment)
 
     for k in post :
-        if k in ('q', 'name', 'type') :
+        if k in ('q', 'name', 'type', 'q1', 'q2', 'q3') :
             continue
 
         print >> stderr, "  %s = %s" % (k, post.get(k))
@@ -186,6 +210,17 @@ def register_experiment() :
     user.name = post.get('name')
     user.email = post.get('email') 
     user.gender = post.get('gender')
+    user.age = int(post.get('age'))
+    user.pg_degree = post.get('pg_degree')
+    user.ug_degree = post.get('ug_degree')
+    user.edu_years = post.get('edu_years')
+    user.language = post.get('language')
+    user.lang_years = int(post.get('lang_years'))
+    user.sls_google = 'sls_google' in post
+    user.sls_arxiv = 'sls_arxiv' in post
+    user.sls_rg = 'sls_rg' in post
+    user.sls_acm = 'sls_acm' in post
+    user.sls_other = 'sls_other' in post
 
     try :
         db.session.add(user)
@@ -202,23 +237,28 @@ def finish_experiment() :
     post = request.get_json()
     print >> stderr, post
 
-    if not post or [ k for k in post if not post[k] ] :
-        return jsonify({ 'error' : 'form incomplete' }), 500
-
-    if 'name' not in post :
+    if not post or 'name' not in post :
         return jsonify({ 'error' : 'no specified user' }), 500
+
+    if not post or [ k for k in ('q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10') if k not in post ] :
+        return jsonify({ 'error' : 'questionnaire incomplete' }), 500
 
     user = User.query.filter_by(name=post['name']).first()
     if not user :
         return jsonify({ 'error' : 'user not found (searched for "%s")' % post['name'] }), 500
 
-    user.relevance = post.get('relevance_preference')
+    #user.relevance = post.get('relevance_preference')
 
     user.q1 = post.get('q1')
     user.q2 = post.get('q2')
     user.q3 = post.get('q3')
     user.q4 = post.get('q4')
     user.q5 = post.get('q5')
+    user.q6 = post.get('q6')
+    user.q7 = post.get('q7')
+    user.q8 = post.get('q8')
+    user.q9 = post.get('q9')
+    user.q10 = post.get('q10')
 
     try :
         db.session.commit()

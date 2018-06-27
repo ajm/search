@@ -31,6 +31,9 @@ class ArticleParser(xml.sax.ContentHandler) :
         self.content += c
 
     def endElement(self, name) :
+        #if self.count == 5000 :
+        #    return
+
         if name == 'article' :
             if self.article :
                 self.db.session.add(self.article)
