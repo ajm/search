@@ -140,10 +140,10 @@
                 <input type="text" class="form-control col-lg-4 col-md-6" ng-model="registration_form.pg_degree" placeholder="e.g. MSc Computer Science" required>
             </div>
             <div class="form-group">
-                <label>Year of study: </label>
+                <label>Year of study at university level: </label>
                 <select ng-model="registration_form.edu_years" required>
                     <option disabled selected value> -- select an option -- </option>
-                    <option ng-repeat="g in [1,2,3,4,5]">{{ g }}</option>
+                    <option ng-repeat="g in [1,2,3,4,5,6,7,8,9,10]">{{ g }}</option>
                 </select>
             </div>
             <div class="form-group">
@@ -225,21 +225,21 @@
                     <label>How would you rate your knowledge of <b>{{ experiments[experiment_counter].topic }}</b>? </label>
                     <select class="float-right" ng-model="registration_form.i1" required>
                         <option disabled selected value> -- select an option -- </option>
-                        <option ng-repeat="g in ['1','2','3','4','5']">{{ g }}</option>
+                        <option ng-repeat="g in ['No knowledge','Limited understanding','Familiar','Good understanding','Expert']">{{ g }}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Have you previously searched for articles about <b>{{ experiments[experiment_counter].topic }}</b>? </label>
+                    <label>How frequently have you searched for articles about <b>{{ experiments[experiment_counter].topic }}</b> in the last academic year? </label>
                     <select class="float-right" ng-model="registration_form.i2" required>
                         <option disabled selected value> -- select an option -- </option>
-                        <option ng-repeat="g in ['1','2','3','4','5']">{{ g }}</option>
+                        <option ng-repeat="g in ['Never','Occasionally','Frequently']">{{ g }}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>How comfortable were you flagging documents that were <b>{{ experiments[experiment_counter].type }}</b>? </label>
+                    <label>How natural/comfortable did you find flagging <b>{{ experiments[experiment_counter].type }}</b> documents for <b>{{ experiments[experiment_counter].topic }}</b>? </label>
                     <select class="float-right" ng-model="registration_form.i3" required>
                         <option disabled selected value> -- select an option -- </option>
-                        <option ng-repeat="g in ['1','2','3','4','5']">{{ g }}</option>
+                        <option ng-repeat="g in ['Very uncomfortable','Uncomfortable','Not sure','Comfortable','Very comfortable']">{{ g }}</option>
                     </select>
                 </div>
                 <button type="submit" class="btn btn-success" ng-click="nextExperiment()" style="color: white; margin-top: 2.5rem;">Next <i class="fa fa-arrow-right fa-lg fa-inverse"></i></button>
@@ -251,7 +251,7 @@
         -->
         <form class="container" ng-if="!test_mode && afterExperiment()">
             <div class="form-group">
-                <label>1. Did it feel more natural to flag documents as <b>relevant</b> or <b>not relevant</b>? </label>
+                <label>1. Did it feel more natural/comfortable to flag documents as <b>relevant</b> or <b>not relevant</b>? </label>
                 <select class="float-right" ng-model="registration_form.q1" required>
                     <option disabled selected value> -- select an option -- </option>
                     <option ng-repeat="g in ['relevant','not relevant','neither']">{{ g }}</option>
@@ -279,7 +279,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>5. Did you feel that flagging documents as <b>relevant</b> or <b>not relevant</b> communicated more information? </label>
+                <label>5. In your opinion, which option communicated more information: flagging documents as <b>relevant</b> or <b>not relevant</b>? </label>
                 <select class="float-right" ng-model="registration_form.q5" required>
                     <option disabled selected value> -- select an option -- </option>
                     <option ng-repeat="g in ['relevant','not relevant','neither']">{{ g }}</option>
@@ -307,17 +307,17 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>9. When you were asked to flag <b>relevant</b> documents, what best describes unflagged documents? </label>
+                <label>9. When you were asked to flag <b>relevant</b> documents, what best describes the set of unflagged documents? </label>
                 <select class="float-right" ng-model="registration_form.q9" required>
                     <option disabled selected value> -- select an option -- </option>
-                    <option ng-repeat="g in ['not relevant','probably not relevant','ambiguous or not relevant', 'did not consider it']">{{ g }}</option>
+                    <option ng-repeat="g in ['not relevant','probably not relevant','ambiguous and not relevant']">{{ g }}</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>10. When you were asked to flag <b>not relevant</b> documents, what best describes unflagged documents? </label>
+                <label>10. When you were asked to flag <b>not relevant</b> documents, what best describes the set of unflagged documents? </label>
                 <select class="float-right" ng-model="registration_form.q10" required>
                     <option disabled selected value> -- select an option -- </option>
-                    <option ng-repeat="g in ['relevant','probably relevant','ambiguous or relevant', 'did not consider it']">{{ g }}</option>
+                    <option ng-repeat="g in ['relevant','probably relevant','ambiguous and relevant']">{{ g }}</option>
                 </select>
             </div>
 
