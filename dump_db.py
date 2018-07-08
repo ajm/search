@@ -23,7 +23,7 @@ def main() :
     print >> f_exp, "username search_term feedback_type article_id feedback"
 
     f_que = open('experiment_table.txt', 'w')
-    print >> f_que, "username search_term feedback_type q1 q2 q3"
+    print >> f_que, "username search_term feedback_type q1 q2 q3 timetaken"
 
     user_count = 0
     experiment_count = 0
@@ -49,6 +49,7 @@ def main() :
                 str(user.q10).replace(' ', '_')
 
         user_count += 1
+        prev_time = user.timestamp
         for ex in Experiment.query.filter_by(user_id=user.id) :
             experiment_count += 1
             
@@ -56,7 +57,10 @@ def main() :
                     "positive" if ex.positive else "negative", \
                     str(ex.q1).replace(' ', '_'), \
                     str(ex.q2).replace(' ', '_'), \
-                    str(ex.q3).replace(' ', '_')
+                    str(ex.q3).replace(' ', '_'), \
+                    int((ex.timestamp - prev_time).total_seconds())
+
+            prev_time = ex.timestamp
 
             for fb in Feedback.query.filter_by(experiment_id=ex.id) :
                 print >> f_exp, user.name, "positive" if ex.positive else "negative", ex.search_term.replace(' ', '_'), fb.article_id, fb.feedback

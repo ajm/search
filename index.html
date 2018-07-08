@@ -87,10 +87,10 @@
         <div class="container" ng-if="!test_mode">
             <div class="jumbotron">
                 <div ng-if="beforeExperiment()">
-                    <b>Welcome to experiment.</b> Please fill in your details below:
+                    Please fill in your details below:
                 </div>
                 <div ng-if="duringExperiment()">
-                    <b>Question {{ experiments[experiment_counter].num }}/{{ experiments.length }}:</b> Please indicate which of the following documents are <b>{{ experiments[experiment_counter].type }}</b> to <b>{{ experiments[experiment_counter].topic }}</b>. You may select as many or as few documents as necessary. When you are finished, please click <b>Next</b>.
+                    <b>Question {{ experiments[experiment_counter].num }}/{{ experiments.length }}:</b> Please indicate which of the following documents are <b>{{ experiments[experiment_counter].type }}</b> to <b>{{ experiments[experiment_counter].question }}</b>. You may select as many or as few documents as necessary. When you are finished, please click <b>Next</b>.
                 </div>
                 <div ng-if="afterExperiment()">
                     <b>Thank you for participanting.</b>
@@ -222,21 +222,21 @@
         <div class="container" ng-show="!test_mode && !loading && resultsPage()">
             <form class="jumbotron">
                 <div class="form-group">
-                    <label>How would you rate your knowledge of <b>{{ experiments[experiment_counter].topic }}</b>? </label>
+                    <label>How would you rate your knowledge of <b>{{ experiments[experiment_counter].question }}</b>? </label>
                     <select class="float-right" ng-model="registration_form.i1" required>
                         <option disabled selected value> -- select an option -- </option>
                         <option ng-repeat="g in ['No knowledge','Limited understanding','Familiar','Good understanding','Expert']">{{ g }}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>How frequently have you searched for articles about <b>{{ experiments[experiment_counter].topic }}</b> in the last academic year? </label>
+                    <label>How frequently have you searched for articles about <b>{{ experiments[experiment_counter].question }}</b> in the last academic year? </label>
                     <select class="float-right" ng-model="registration_form.i2" required>
                         <option disabled selected value> -- select an option -- </option>
                         <option ng-repeat="g in ['Never','Occasionally','Frequently']">{{ g }}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>How natural/comfortable did you find flagging <b>{{ experiments[experiment_counter].type }}</b> documents for <b>{{ experiments[experiment_counter].topic }}</b>? </label>
+                    <label>How natural/comfortable did you find flagging <b>{{ experiments[experiment_counter].type }}</b> documents for <b>{{ experiments[experiment_counter].question }}</b>? </label>
                     <select class="float-right" ng-model="registration_form.i3" required>
                         <option disabled selected value> -- select an option -- </option>
                         <option ng-repeat="g in ['Very uncomfortable','Uncomfortable','Not sure','Comfortable','Very comfortable']">{{ g }}</option>
@@ -348,7 +348,7 @@
                 $scope.registry_error = false;
                 $scope.registry_error_message = null;
                 $scope.query = "";
-                $scope.count = 10;
+                $scope.count = 10; // CHANGE THIS TO GET DIFFERENT NUMBER OF DOCUMENTS
                 $scope.offset = 0;
                 $scope.documents = [];
                 $scope.loading = false;
@@ -357,11 +357,14 @@
 
                 $scope.registration_form = {};
                 $scope.experiment_counter = -1;
-                $scope.experiments = [
-                    { 'topic' : 'artificial neural networks' },
-                    { 'topic' : 'convolutional neural networks' },
-                    { 'topic' : 'delusional neural networks' }
+                $scope.experiment_desc = [
+                    { 'query' : 'gender recognition',       'question' : 'face recognition' },
+                    { 'query' : 'sentiment analysis',       'question' : 'twitter sentiment analysis' },
+                    { 'query' : 'wireless sensor networks', 'question' : 'wireless network energy efficiency' },
+                    { 'query' : 'deep learning medicine',   'question' : 'clinical applications of deep learning' },
+                    { 'query' : 'fake news twitter',        'question' : 'fake news detection' }
                 ];
+                $scope.experiments = [];
 
                 //$scope.resque_questions = [
                 //    { 'id' : 'q1', 'text' : "A ResQue-style question: " },
@@ -401,15 +404,35 @@
                     return $scope.test_mode || $scope.duringExperiment();
                 };
 
-                $scope.initialiseExperiments = function() {
+                $scope.shuffle = function(deck) {
                     var i = 0, j = 0, temp = null;
 
-                    // shuffle
-                    for (i = $scope.experiments.length - 1; i > 0; i--) {
+                    for (i = deck.length - 1; i > 0; i--) {
                         j = Math.floor(Math.random() * (i + 1));
-                        temp = $scope.experiments[i];
-                        $scope.experiments[i] = $scope.experiments[j];
-                        $scope.experiments[j] = temp;
+                        temp = deck[i];
+                        deck[i] = deck[j];
+                        deck[j] = temp;
+                    }
+                };
+
+                $scope.initialiseExperiments = function() {
+                    var i = 0, j = 0; //, temp = null;
+
+                    // shuffle experiment_desc
+                    //for (i = $scope.experiment_desc.length - 1; i > 0; i--) {
+                    //    j = Math.floor(Math.random() * (i + 1));
+                    //    temp = $scope.experiment_desc[i];
+                    //    $scope.experiment_desc[i] = $scope.experiment_desc[j];
+                    //    $scope.experiment_desc[j] = temp;
+                    //}
+                    $scope.shuffle($scope.experiment_desc);
+
+                    // populate experiments
+                    $scope.experiments = [];
+                    for(i = 0; i < 2; i++) {
+                        for(j = 0; j < $scope.experiment_desc.length; j++) {
+                            $scope.experiments.push(Object.assign({}, $scope.experiment_desc[j]));
+                        }
                     }
 
                     // re-number + set relevant/non-relevant
@@ -449,6 +472,7 @@
                     $scope.positive_feedback = true;
                     $scope.experiment_counter = -1;
                     $scope.documents = [];
+                    $scope.experiments = [];
                     $scope.navbar.q = "";
                     $scope.offset = 0;
                     $scope.registration_form = {};
@@ -486,7 +510,7 @@
 
                     if($scope.beforeExperiment()) {
                         $scope.experiment_counter++;
-                        $scope.navbar.q = $scope.experiments[$scope.experiment_counter].topic;
+                        $scope.navbar.q = $scope.experiments[$scope.experiment_counter].query;
                         $scope.positive_feedback = $scope.experiments[$scope.experiment_counter].type === 'relevant'
                         $scope.submitQuery();
                         return;
@@ -513,7 +537,7 @@
                         $scope.experiment_counter++;
 
                         if($scope.duringExperiment()) {
-                            $scope.navbar.q = $scope.experiments[$scope.experiment_counter].topic;
+                            $scope.navbar.q = $scope.experiments[$scope.experiment_counter].query;
                             $scope.positive_feedback = $scope.experiments[$scope.experiment_counter].type === 'relevant'
                             $scope.submitQuery();
                         }
@@ -528,7 +552,10 @@
                 };
 
                 $scope.submitQuery = function() {
-                    $scope.query = $scope.navbar.q;
+                    if($scope.query !== $scope.navbar.q) {
+                        $scope.query = $scope.navbar.q;
+                        $scope.offset = 0;
+                    }
                     $scope.loading = true;
                     $http.post("http://localhost:5000/search", { 
                         'q'     : $scope.query, 
@@ -537,6 +564,7 @@
                     .then(function(response) {
                         if($scope.loading) {
                             $scope.documents = response.data;
+                            $scope.shuffle($scope.documents);
 
                             for(var i = 0; i < $scope.documents.length; ++i) {
                                 $scope.documents[i].flagged = false;

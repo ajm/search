@@ -86,6 +86,8 @@ class User(db.Model) :
     q9          = db.Column(db.String(30))
     q10         = db.Column(db.String(30))
 
+    timestamp   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
     def __repr__(self) : return '<User %r>' % self.id
 
     def json(self) :
@@ -107,6 +109,8 @@ class Experiment(db.Model) :
     q1          = db.Column(db.String(30))
     q2          = db.Column(db.String(30))
     q3          = db.Column(db.String(30))
+
+    timestamp   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self) : 
         return '<Feedback %r>' % self.id
@@ -173,6 +177,9 @@ def store_feedback() :
     experiment.search_term = post.get('q')
     experiment.user = User.query.filter_by(name=post.get('name')).first()
     experiment.positive = post.get('type') == "relevant"
+    experiment.q1 = post.get('q1')
+    experiment.q2 = post.get('q2')
+    experiment.q3 = post.get('q3')
 
     db.session.add(experiment)
 
