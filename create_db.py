@@ -1,12 +1,13 @@
 from sys import argv, exit, stderr
 import datetime
+import os
 import xml.sax
 
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from scipy.sparse import csr_matrix
 
-from server import db, Article
+from server import db, Article, TUSK_DB
 from arxiv import ArxivCleaner
 from utils import *
 
@@ -109,6 +110,14 @@ def create_linrel_matrix(articles, N) :
     save_features_linrel(dict([ (y,x) for x,y in enumerate(v.get_feature_names()) ]))
 
 def create_database(args) :
+    global TUSK_DB
+
+    print >> stderr, "deleting db called %s (if present) ..." % TUSK_DB
+    try :
+        os.remove(TUSK_DB)
+    except :
+        pass
+
     print >> stderr, "creating db ..."
     db.create_all()
 
