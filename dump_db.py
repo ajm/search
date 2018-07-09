@@ -63,7 +63,7 @@ def main() :
             prev_time = ex.timestamp
 
             for fb in Feedback.query.filter_by(experiment_id=ex.id) :
-                print >> f_exp, user.name, "positive" if ex.positive else "negative", ex.search_term.replace(' ', '_'), fb.article_id, fb.feedback
+                print >> f_exp, user.name, ex.search_term.replace(' ', '_'), "positive" if ex.positive else "negative", fb.article_id, fb.feedback
 
     f_use.close()
     print >> stderr, "written", f_use.name
