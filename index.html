@@ -90,7 +90,7 @@
                     Please fill in your details below:
                 </div>
                 <div ng-if="duringExperiment()">
-                    <b>Question {{ experiments[experiment_counter].num }}/{{ experiments.length }}:</b> Please indicate which of the following documents are <b>{{ experiments[experiment_counter].type }}</b> to <b>{{ experiments[experiment_counter].question }}</b>. You may select as many or as few documents as necessary. When you are finished, please click <b>Next</b>.
+                    <b>Question {{ experiments[experiment_counter].num }}/{{ experiments.length }}:</b> Please indicate which of the following documents are <b>{{ experiments[experiment_counter].type }}</b> to <b>{{ experiments[experiment_counter].question }}</b>. Documents can only be relevant or not relevant. You may select as many or as few documents as necessary. When you are finished, please click <b>Next</b>.
                 </div>
                 <div ng-if="afterExperiment()">
                     <b>Thank you for participanting.</b>
